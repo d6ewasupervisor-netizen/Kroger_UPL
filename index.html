@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kroger Tag Guide — Marker Editor</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
 <style>
 :root {
   --kroger-blue: #003B71;
@@ -50,6 +52,9 @@ body{font-family:'IBM Plex Sans',sans-serif;background:#F1F5F9;color:var(--dark)
 .btn-export:hover { background:#15803D; }
 .btn-print { background:var(--info-cyan);color:white; }
 .btn-print:hover { background:#0E7490; }
+.btn-pdf { background:var(--kroger-red);color:white; }
+.btn-pdf:hover { background:#C41530; }
+.btn-pdf:disabled { opacity:0.6;cursor:wait; }
 .btn-reset { background:rgba(255,255,255,0.2);color:white; }
 .btn-reset:hover { background:rgba(255,255,255,0.3); }
 
@@ -506,6 +511,7 @@ body.print-measure .field-desc { font-size:6.5pt !important; }
     <button class="btn-reset" onclick="resetAll()">Reset</button>
     <button class="btn-export" onclick="exportPositions()">Export Positions</button>
     <button class="btn-print" onclick="printTagGuide()">Print</button>
+    <button class="btn-pdf" onclick="saveAsPDF()">Save PDF</button>
   </div>
 </div>
 
@@ -896,6 +902,89 @@ window.addEventListener('afterprint', () => {
   document.body.classList.remove('print-measure');
   removeLeaderLines();
 });
+
+// ===== SAVE AS PDF (direct render — preserves exact marker positions) =====
+async function saveAsPDF() {
+  const btn = document.querySelector('.btn-pdf');
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+
+  const showLines = document.getElementById('leader-lines-toggle').checked;
+
+  try {
+    // Switch to print-measure layout so dimensions match the setup screen exactly
+    document.body.classList.add('print-measure');
+    document.body.offsetHeight; // force reflow
+
+    if (showLines) {
+      buildLeaderLines('grocery-panel');
+      buildLeaderLines('gm-panel');
+    }
+
+    // Wait for layout + SVG to settle
+    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 100)));
+
+    // Landscape letter: 11in × 8.5in at 96 DPI = 1056 × 816 px
+    const pageW = 11 * 96;
+    const pageH = 8.5 * 96;
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'in', format: 'letter' });
+
+    const sections = document.querySelectorAll('.tag-section');
+
+    for (let i = 0; i < sections.length; i++) {
+      const section = sections[i];
+
+      // Capture the section at 2× resolution for crisp output
+      const canvas = await html2canvas(section, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        // Use the exact width from the print-measure layout
+        windowWidth: section.scrollWidth
+      });
+
+      // Fit into the printable area (landscape letter minus margins)
+      // Margins: 0.35in top/bottom, 0.4in left/right  (matches @page rule)
+      const marginX = 0.4;
+      const marginY = 0.35;
+      const availW = 11 - 2 * marginX;   // 10.2in
+      const availH = 8.5 - 2 * marginY;  // 7.8in
+
+      const imgAspect = canvas.width / canvas.height;
+      let drawW = availW;
+      let drawH = drawW / imgAspect;
+
+      if (drawH > availH) {
+        drawH = availH;
+        drawW = drawH * imgAspect;
+      }
+
+      // Center on the page
+      const offX = marginX + (availW - drawW) / 2;
+      const offY = marginY + (availH - drawH) / 2;
+
+      if (i > 0) pdf.addPage('letter', 'landscape');
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', offX, offY, drawW, drawH);
+    }
+
+    pdf.save('Kroger_Tag_Guide.pdf');
+
+  } catch (err) {
+    console.error('PDF generation failed:', err);
+    alert('PDF generation failed. Check console for details.');
+  } finally {
+    // Clean up
+    document.body.classList.remove('print-measure');
+    removeLeaderLines();
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+}
 
 // Init
 renderMarkers();
