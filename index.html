@@ -48,6 +48,8 @@ body{font-family:'IBM Plex Sans',sans-serif;background:#F1F5F9;color:var(--dark)
 }
 .btn-export { background:var(--field-green);color:white; }
 .btn-export:hover { background:#15803D; }
+.btn-print { background:var(--info-cyan);color:white; }
+.btn-print:hover { background:#0E7490; }
 .btn-reset { background:rgba(255,255,255,0.2);color:white; }
 .btn-reset:hover { background:rgba(255,255,255,0.3); }
 
@@ -218,6 +220,123 @@ body{font-family:'IBM Plex Sans',sans-serif;background:#F1F5F9;color:var(--dark)
 }
 .callout-amber{background:#FEF3C7;border:1px solid #FDE68A;}
 .callout strong{font-weight:700;}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  @page {
+    size: portrait;
+    margin: 0.5in;
+  }
+
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+
+  body {
+    background: white !important;
+    font-size: 10pt;
+    margin: 0;
+    padding: 0;
+  }
+
+  .toolbar, .callout, .modal-overlay, .hint {
+    display: none !important;
+  }
+
+  .tag-section {
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    border: none !important;
+    page-break-after: always;
+    break-after: page;
+    overflow: visible !important;
+  }
+
+  .tag-section:last-of-type {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .tag-section-header {
+    padding: 12px 0 8px !important;
+    border-bottom: 2px solid #003B71 !important;
+    margin-bottom: 12px;
+  }
+
+  .tag-section-header h2 {
+    font-size: 18pt !important;
+  }
+
+  .tag-body {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+
+  .img-panel {
+    width: 100% !important;
+    max-width: 5.5in !important;
+    margin: 0 auto !important;
+    overflow: visible !important;
+  }
+
+  .img-panel img {
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .marker {
+    width: 18px !important;
+    height: 18px !important;
+    font-size: 9px !important;
+    box-shadow: 0 0 0 1.5px white, 0 1px 3px rgba(0,0,0,0.4) !important;
+  }
+
+  .marker .tip { display: none !important; }
+
+  .legend-panel {
+    border-left: none !important;
+    border-top: 2px solid var(--divider) !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 10px 0 !important;
+    width: 100% !important;
+    columns: 2;
+    column-gap: 20px;
+  }
+
+  .zone-label {
+    font-size: 10pt !important;
+    break-after: avoid;
+    column-span: all;
+    margin-top: 6px !important;
+    padding: 4px 0 2px !important;
+  }
+
+  .legend-item {
+    font-size: 9pt !important;
+    break-inside: avoid;
+    padding: 3px 6px !important;
+    margin-top: 2px !important;
+    line-height: 1.3 !important;
+  }
+
+  .legend-num {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 9px !important;
+  }
+
+  .field-name { font-size: 9pt !important; }
+  .field-val { font-size: 8pt !important; }
+  .field-desc { font-size: 8pt !important; }
+
+  .legend-note {
+    font-size: 8pt !important;
+    break-inside: avoid;
+  }
+}
 </style>
 </head>
 <body>
@@ -231,6 +350,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:#F1F5F9;color:var(--dark)
   <div style="display:flex;gap:8px;">
     <button class="btn-reset" onclick="resetAll()">Reset</button>
     <button class="btn-export" onclick="exportPositions()">Export Positions</button>
+    <button class="btn-print" onclick="printTagGuide()">Print</button>
   </div>
 </div>
 
@@ -330,40 +450,40 @@ body{font-family:'IBM Plex Sans',sans-serif;background:#F1F5F9;color:var(--dark)
 // ===== MARKER DEFINITIONS =====
 const markerDefs = {
   'grocery-panel': [
-    {id:1,  color:'cyan',   label:'Feature Callout Badge', top:4.5, left:12},
-    {id:2,  color:'blue',   label:'Catalog #',             top:3,   left:34},
-    {id:3,  color:'blue',   label:'UPC Barcode',           top:3,   left:68},
-    {id:4,  color:'blue',   label:'Pack',                  top:7,   left:38},
-    {id:5,  color:'cyan',   label:'File Date',             top:7,   left:83},
-    {id:6,  color:'blue',   label:'Description',           top:10,  left:40},
-    {id:7,  color:'blue',   label:'Size',                  top:10,  left:88},
-    {id:8,  color:'green',  label:'Reg Unit Price',        top:15,  left:14},
-    {id:9,  color:'green',  label:'Regular Price',         top:15,  left:80},
-    {id:10, color:'purple', label:'Location',               top:19,  left:14},
-    {id:11, color:'red',    label:'SALE Banner',           top:25,  left:50},
-    {id:12, color:'red',    label:'Sale Price',            top:37,  left:50},
-    {id:13, color:'red',    label:'Promo Unit Price',      top:47,  left:15},
-    {id:14, color:'red',    label:'With Card',             top:50,  left:50},
-    {id:15, color:'amber',  label:'Fiscal Week',           top:47,  left:85},
-    {id:16, color:'amber',  label:'Promotion Expiration Date', top:51,  left:85},
-    {id:17, color:'cyan',   label:'Product Image',         top:72,  left:50},
-    {id:18, color:'orange', label:'Vestcom Ordering Info',  top:97,  left:50},
-    {id:19, color:'purple', label:'Tearaway Location',     top:97,  left:12},
+    {id:1,  color:'cyan',   label:'Feature Callout Badge', top:2.1, left:29.9},
+    {id:2,  color:'blue',   label:'Catalog #',             top:7.1, left:51.9},
+    {id:3,  color:'blue',   label:'UPC Barcode',           top:2.0, left:54.2},
+    {id:4,  color:'blue',   label:'Pack',                  top:10.3,left:48.5},
+    {id:5,  color:'cyan',   label:'File Date',             top:11.3,left:77.3},
+    {id:6,  color:'blue',   label:'Description',           top:10.3,left:31.0},
+    {id:7,  color:'blue',   label:'Size',                  top:14.7,left:78.5},
+    {id:8,  color:'green',  label:'Reg Unit Price',        top:17.4,left:24.0},
+    {id:9,  color:'green',  label:'Regular Price',         top:17.4,left:51.7},
+    {id:10, color:'purple', label:'Location',              top:25.7,left:25.7},
+    {id:11, color:'red',    label:'SALE Banner',           top:25.4,left:45.0},
+    {id:12, color:'red',    label:'Sale Price',            top:37.0,left:7.6},
+    {id:13, color:'red',    label:'Promo Unit Price',      top:53.0,left:5.0},
+    {id:14, color:'red',    label:'With Card',             top:55.3,left:38.1},
+    {id:15, color:'amber',  label:'Fiscal Week',           top:53.7,left:82.6},
+    {id:16, color:'amber',  label:'Promotion Expiration Date', top:57.1,left:73.1},
+    {id:17, color:'cyan',   label:'Product Image',         top:62.4,left:7.6},
+    {id:18, color:'orange', label:'Vestcom Ordering Info',  top:92.7,left:19.3},
+    {id:19, color:'purple', label:'Tearaway Location',     top:92.7,left:4.9},
   ],
   'gm-panel': [
-    {id:1,  color:'blue',   label:'Catalog #',     top:12, left:7},
-    {id:2,  color:'blue',   label:'Department',     top:7,  left:19},
-    {id:3,  color:'blue',   label:'SKU/MSI',        top:18, left:15},
-    {id:4,  color:'amber',  label:'UA Date',        top:7,  left:70},
-    {id:5,  color:'blue',   label:'UPC Barcode',    top:26, left:62},
-    {id:6,  color:'blue',   label:'Pack',           top:36, left:72},
-    {id:7,  color:'cyan',   label:'File Date',      top:36, left:88},
-    {id:8,  color:'blue',   label:'Description',    top:52, left:32},
-    {id:9,  color:'blue',   label:'Size',           top:52, left:85},
-    {id:10, color:'green',  label:'Unit Price',     top:72, left:14},
-    {id:11, color:'purple', label:'Location',       top:85, left:14},
-    {id:12, color:'green',  label:'Regular Price',  top:75, left:70},
-    {id:13, color:'orange', label:'Bottom Strip',   top:95, left:50},
+    {id:1,  color:'blue',   label:'Catalog #',     top:3.0, left:5.0},
+    {id:2,  color:'blue',   label:'Department',     top:2.4, left:30.7},
+    {id:3,  color:'blue',   label:'SKU/MSI',        top:6.7, left:18.1},
+    {id:4,  color:'amber',  label:'UA Date',        top:2.3, left:55.0},
+    {id:5,  color:'blue',   label:'UPC Barcode',    top:10.9,left:55.7},
+    {id:6,  color:'blue',   label:'Pack',           top:16.6,left:62.7},
+    {id:7,  color:'cyan',   label:'File Date',      top:16.4,left:77.1},
+    {id:8,  color:'blue',   label:'Description',    top:16.9,left:4.2},
+    {id:9,  color:'blue',   label:'Size',           top:20.9,left:83.9},
+    {id:10, color:'green',  label:'Unit Price',     top:24.1,left:2.7},
+    {id:11, color:'purple', label:'Location',       top:41.3,left:2.7},
+    {id:12, color:'green',  label:'Regular Price',  top:24.7,left:58.7},
+    {id:13, color:'orange', label:'Bottom Strip',   top:35.9,left:32.6},
   ]
 };
 
@@ -481,6 +601,11 @@ function resetAll() {
     currentPositions[panelId] = markers.map(m => ({...m}));
   }
   renderMarkers();
+}
+
+// ===== PRINT =====
+function printTagGuide() {
+  window.print();
 }
 
 // Init
