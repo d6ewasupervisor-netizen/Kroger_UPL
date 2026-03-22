@@ -89,6 +89,8 @@ body{font-family:'IBM Plex Sans',sans-serif;background:#F1F5F9;color:var(--dark)
 }
 .img-panel img {
   display:block;
+  width:100%;
+  height:auto;
   pointer-events:none;
 }
 
@@ -246,6 +248,85 @@ body{font-family:'IBM Plex Sans',sans-serif;background:#F1F5F9;color:var(--dark)
   z-index:5;
 }
 
+/* tag-body needs relative for leader line SVG overlay */
+.tag-body { position: relative; }
+
+/* ===== PRINT-MEASURE: mirrors print layout on screen for accurate line measurement ===== */
+body.print-measure .toolbar,
+body.print-measure .callout,
+body.print-measure .hint { display:none !important; }
+
+body.print-measure .tag-section {
+  max-width:10.2in !important;
+  width:10.2in !important;
+  margin:0 auto !important;
+  box-shadow:none !important;
+  overflow:visible !important;
+}
+
+body.print-measure .tag-body {
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:flex-start !important;
+  gap:12px !important;
+  width:100% !important;
+}
+
+body.print-measure .img-panel {
+  flex-shrink:0 !important;
+  overflow:visible !important;
+}
+
+body.print-measure #grocery-panel { width:3.6in !important; }
+body.print-measure #gm-panel { width:4.2in !important; }
+
+body.print-measure .img-panel img {
+  width:100% !important;
+  height:auto !important;
+}
+
+body.print-measure .marker {
+  width:16px !important;
+  height:16px !important;
+  font-size:8px !important;
+  transform:translate(-50%,-50%) !important;
+}
+
+body.print-measure .legend-panel {
+  flex:1 !important;
+  max-height:none !important;
+  overflow:visible !important;
+  padding:0 0 0 8px !important;
+  border-left:2px solid var(--divider) !important;
+}
+
+body.print-measure .zone-label {
+  font-size:7.5pt !important;
+  margin-top:3px !important;
+  padding:2px 0 1px !important;
+}
+
+body.print-measure .zone-label:first-child { margin-top:0 !important; }
+
+body.print-measure .legend-item {
+  font-size:7pt !important;
+  padding:1px 4px !important;
+  margin-top:1px !important;
+  line-height:1.25 !important;
+  border-left-width:2px !important;
+}
+
+body.print-measure .legend-num {
+  width:14px !important;
+  height:14px !important;
+  font-size:7px !important;
+  min-width:14px !important;
+}
+
+body.print-measure .field-name { font-size:7pt !important; }
+body.print-measure .field-val { font-size:6.5pt !important; padding:0 3px !important; }
+body.print-measure .field-desc { font-size:6.5pt !important; }
+
 /* ===== PRINT STYLES ===== */
 @media print {
   @page {
@@ -310,6 +391,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:#F1F5F9;color:var(--dark)
     align-items: flex-start !important;
     gap: 12px !important;
     width: 100% !important;
+    position: relative !important;
   }
 
   .img-panel {
@@ -349,6 +431,11 @@ body{font-family:'IBM Plex Sans',sans-serif;background:#F1F5F9;color:var(--dark)
   /* Leader lines overlay visible when activated */
   .leader-lines-overlay.active-for-print {
     display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
   }
 
   /* Legend takes remaining width */
@@ -686,61 +773,92 @@ function buildLeaderLines(panelId) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
 
-  // Remove any existing SVG overlay
-  const existing = panel.querySelector('.leader-lines-overlay');
-  if (existing) existing.remove();
+  const tagBody = panel.closest('.tag-body');
+  const tagSection = panel.closest('.tag-section');
+  const legendPanel = tagSection.querySelector('.legend-panel');
+
+  // Remove any existing SVG overlay on this tag-body
+  tagBody.querySelectorAll('.leader-lines-overlay').forEach(el => el.remove());
+
+  // Measure tag-body and panel positions
+  const bodyRect = tagBody.getBoundingClientRect();
+  const panelRect = panel.getBoundingClientRect();
+  const svgW = bodyRect.width;
+  const svgH = bodyRect.height;
 
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.classList.add('leader-lines-overlay', 'active-for-print');
-  svg.setAttribute('viewBox', '0 0 1000 1000');
+  svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
   svg.setAttribute('preserveAspectRatio', 'none');
-  svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;';
+  svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;display:block;';
 
   const markers = currentPositions[panelId];
-  const tagSection = panel.closest('.tag-section');
-  const legendPanel = tagSection.querySelector('.legend-panel');
   const legendItems = legendPanel.querySelectorAll('.legend-item');
 
-  // Build a map of marker id -> legend item vertical center (as fraction of legend height)
+  // Build a map of marker id -> legend-num center position relative to tag-body
   const legendMap = {};
   legendItems.forEach(item => {
     const numEl = item.querySelector('.legend-num');
     if (numEl) {
       const num = parseInt(numEl.textContent);
-      legendMap[num] = item;
+      const numRect = numEl.getBoundingClientRect();
+      legendMap[num] = {
+        x: numRect.left + numRect.width / 2 - bodyRect.left,
+        y: numRect.top + numRect.height / 2 - bodyRect.top
+      };
     }
   });
 
+  // Right edge of img-panel relative to tag-body
+  const rightEdge = panelRect.right - bodyRect.left;
+
   markers.forEach(m => {
     const stroke = colorMap[m.color] || '#333';
-    // Marker position in SVG viewBox coords (0-1000)
-    const mx = m.left * 10; // percentage -> 0-1000
-    const my = m.top * 10;
 
-    // Line goes from marker to the right edge of the img-panel
-    // We draw a short colored line from the marker to the right edge
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', mx);
-    line.setAttribute('y1', my);
-    line.setAttribute('x2', 1000); // right edge
-    line.setAttribute('y2', my);
-    line.setAttribute('stroke', stroke);
-    line.setAttribute('stroke-width', '2');
-    line.setAttribute('stroke-dasharray', '6,3');
-    line.setAttribute('opacity', '0.7');
-    svg.appendChild(line);
+    // Marker center relative to tag-body
+    const mx = (panelRect.left - bodyRect.left) + (m.left / 100) * panelRect.width;
+    const my = (panelRect.top - bodyRect.top) + (m.top / 100) * panelRect.height;
 
-    // Small circle at marker position
+    const legendPos = legendMap[m.id];
+
+    if (legendPos) {
+      // Draw 3-segment path: marker → right edge of image → legend number
+      // Horizontal from marker to right edge, then diagonal to legend-num
+      const midX = rightEdge + (legendPos.x - rightEdge) * 0.3;
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d',
+        'M ' + mx + ' ' + my +
+        ' L ' + rightEdge + ' ' + my +
+        ' C ' + midX + ' ' + my + ' ' + midX + ' ' + legendPos.y + ' ' + legendPos.x + ' ' + legendPos.y
+      );
+      path.setAttribute('stroke', stroke);
+      path.setAttribute('stroke-width', '1.2');
+      path.setAttribute('stroke-dasharray', '4,2');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('opacity', '0.55');
+      svg.appendChild(path);
+
+      // Highlight circle at legend-num position
+      const lCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      lCircle.setAttribute('cx', legendPos.x);
+      lCircle.setAttribute('cy', legendPos.y);
+      lCircle.setAttribute('r', '3');
+      lCircle.setAttribute('fill', stroke);
+      lCircle.setAttribute('opacity', '0.6');
+      svg.appendChild(lCircle);
+    }
+
+    // Circle at marker position
     const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     circle.setAttribute('cx', mx);
     circle.setAttribute('cy', my);
-    circle.setAttribute('r', '5');
+    circle.setAttribute('r', '4');
     circle.setAttribute('fill', stroke);
     circle.setAttribute('opacity', '0.8');
     svg.appendChild(circle);
   });
 
-  panel.appendChild(svg);
+  tagBody.appendChild(svg);
 }
 
 function removeLeaderLines() {
@@ -750,22 +868,32 @@ function removeLeaderLines() {
 // ===== PRINT =====
 function printTagGuide() {
   const showLines = document.getElementById('leader-lines-toggle').checked;
+
   if (showLines) {
-    buildLeaderLines('grocery-panel');
-    buildLeaderLines('gm-panel');
-  }
-  // Small delay to let DOM update before printing
-  setTimeout(() => {
+    // Apply print-like layout so measurements match actual print positions
+    document.body.classList.add('print-measure');
+
+    // Force reflow, then measure and build lines
+    document.body.offsetHeight;
+
+    requestAnimationFrame(() => {
+      buildLeaderLines('grocery-panel');
+      buildLeaderLines('gm-panel');
+
+      // Brief delay for SVG to render, then print
+      // Keep print-measure class on so layout matches during print
+      setTimeout(() => {
+        window.print();
+      }, 50);
+    });
+  } else {
     window.print();
-    // Clean up leader lines after print
-    if (showLines) {
-      removeLeaderLines();
-    }
-  }, 100);
+  }
 }
 
-// Clean up leader lines if user cancels print dialog
+// Clean up after print dialog closes (print or cancel)
 window.addEventListener('afterprint', () => {
+  document.body.classList.remove('print-measure');
   removeLeaderLines();
 });
 
