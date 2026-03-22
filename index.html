@@ -289,7 +289,7 @@ body.print-measure .marker {
   width:16px !important;
   height:16px !important;
   font-size:8px !important;
-  transform:translate(-50%,calc(-50% + 0.5in)) !important;
+  transform:translate(-50%,calc(-50% + 0.25in)) !important;
 }
 
 body.print-measure .legend-panel {
@@ -422,8 +422,8 @@ body.print-measure .field-desc { font-size:6.5pt !important; }
     font-size: 8px !important;
     box-shadow: 0 0 0 1.5px white, 0 1px 3px rgba(0,0,0,0.4) !important;
     cursor: default !important;
-    /* Shift markers down 0.5in to compensate for print offset */
-    transform: translate(-50%, calc(-50% + 0.5in)) !important;
+    /* Shift markers down 0.25in to compensate for print offset */
+    transform: translate(-50%, calc(-50% + 0.25in)) !important;
   }
 
   .marker .tip { display: none !important; }
@@ -815,9 +815,9 @@ function buildLeaderLines(panelId) {
   markers.forEach(m => {
     const stroke = colorMap[m.color] || '#333';
 
-    // Marker center relative to tag-body (add 0.5in = 48px print offset)
+    // Marker center relative to tag-body (add 0.25in = 24px print offset)
     const mx = (panelRect.left - bodyRect.left) + (m.left / 100) * panelRect.width;
-    const my = (panelRect.top - bodyRect.top) + (m.top / 100) * panelRect.height + 48;
+    const my = (panelRect.top - bodyRect.top) + (m.top / 100) * panelRect.height + 24;
 
     const legendPos = legendMap[m.id];
 
